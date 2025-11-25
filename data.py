@@ -7,6 +7,7 @@ def get_applicant_data():
     Returns the structured table of applicants.
     """
     data = [
+        # --- EXISTING DATA ---
         {"ID": "C001", "Type": "Business", "Name": "Apex Logistics", "Base_FICO": 680, "Revenue": "$1.2M",
          "Status": "Under Review"},
         {"ID": "C002", "Type": "Individual", "Name": "Sarah Connor", "Base_FICO": 790, "Revenue": "$120k",
@@ -23,13 +24,20 @@ def get_applicant_data():
          "Status": "Pending"},
         {"ID": "C008", "Type": "Individual", "Name": "Robert Vance", "Base_FICO": 820, "Revenue": "$250k",
          "Status": "Approved"},
+
+        # --- NEW "REJECTED BUT GOOD" EXAMPLES ---
+        {"ID": "C009", "Type": "Individual", "Name": "Michael Scott", "Base_FICO": 590, "Revenue": "$0 (Unemployed)",
+         "Status": "Auto-Rejected"},
+        {"ID": "C010", "Type": "Business", "Name": "Blue Sky Construction", "Base_FICO": 605, "Revenue": "$400k",
+         "Status": "High Risk"},
+        {"ID": "C011", "Type": "Individual", "Name": "Elena Fisher", "Base_FICO": 615, "Revenue": "$45k",
+         "Status": "Pending"},
     ]
     return pd.DataFrame(data)
 
 
 # --- 2. UNSTRUCTURED DATA (The Evidence) ---
 # This dictionary maps the ID to a "Document" (Email, Transaction Log, Letter)
-# These represent the files you would usually upload.
 MOCK_DOCUMENTS = {
     "C001": """
     TYPE: INTERNAL EMAIL CHAIN
@@ -119,6 +127,48 @@ MOCK_DOCUMENTS = {
     - Real Estate Holdings: $3M
     - Liabilities: $0
     Client is effectively zero risk.
+    """,
+
+    "C009": """
+    TYPE: OFFICIAL JOB OFFER LETTER
+    COMPANY: Google Inc.
+    RE: Michael Scott
+
+    Dear Michael,
+    We are pleased to offer you the position of Senior Regional Manager.
+    - Start Date: Next Monday
+    - Base Salary: $160,000 USD / year
+    - Signing Bonus: $25,000 (Payable immediately)
+
+    We understand you have been unemployed for 6 months which impacted your credit history, 
+    but this guaranteed income stream should rectify your financial status immediately.
+    """,
+
+    "C010": """
+    TYPE: GOVERNMENT CONTRACT AWARD
+    TO: Blue Sky Construction
+
+    Congratulations. This letter serves as official notice that your bid for the 
+    "City Highway Repair Project" has been accepted.
+
+    - Contract Value: $2,500,000
+    - Mobilization Advance: $250,000 (To be wired within 5 business days)
+
+    This contract is fully government-backed and guarantees work for the next 18 months.
+    """,
+
+    "C011": """
+    TYPE: LIQUIDATION RECEIPT & BANK LETTER
+    CLIENT: Elena Fisher
+
+    To Bank Loan Officer,
+
+    Please find attached proof of funds.
+    I have liquidated my inherited property in Europe. 
+    Wire Transfer #998877 confirms a deposit of $320,000 USD into my checking account yesterday.
+
+    While my monthly salary from my day job is low ($45k), this cash reserve 
+    is more than enough to cover the entire loan amount of $200k instantly as collateral.
     """
 }
 
