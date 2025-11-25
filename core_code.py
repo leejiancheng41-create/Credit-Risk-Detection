@@ -17,7 +17,7 @@ def analyze_risk_evidence(api_key, document_text):
     prompt = f"""
     You are an expert Credit Risk Underwriter. Analyze the following document.
 
-    DOCUMENT:
+    DOCUMENT:(Includes uploaded files and chat logs):
     {document_text}
 
     TASK:
@@ -76,3 +76,47 @@ def calculate_refined_score(base_score, ai_result):
     new_score = max(300, min(850, new_score))
 
     return new_score, total_adjustment
+
+
+# --- CORE FUNCTION 3: CUSTOMER SIMULATOR (NEW) ---
+def get_customer_response(api_key, client_name, client_data, history):
+    """
+    Simulates the customer replying to the loan officer.
+    """
+    if not api_key:
+        return "System: API Key missing."
+
+    genai.configure(api_key=api_key)
+    model = genai.GenerativeModel('gemini-2.5-flash')
+
+    # We turn the chat history list into a string for the prompt
+    conversation_text = ""
+    for msg in history:
+        role = "Loan Officer" if msg["role"] == "user" else "You"
+        conversation_text += f"{role}: {msg['content']}\n"
+
+    prompt = f"""
+    Act as {client_name}. You are currently applying for a loan and chatting with a Bank Loan Officer.
+
+    YOUR PROFILE:
+    {client_data}
+
+    INSTRUCTIONS:
+    - Answer the Loan Officer's questions naturally.
+    - If you have bad credit/revenue, explain it (make up a realistic excuse like medical bills, market changes, etc, or use info from your profile).
+    - If you have hidden assets (like inheritance, contracts), mention them if the Officer asks about your ability to pay.
+    - Be polite but negotiating.
+    - Keep responses short (1-3 sentences).
+
+    CURRENT CONVERSATION:
+    {conversation_text}
+
+    Loan Officer: (Waiting for your response)
+    You:
+    """
+
+    try:
+        response = model.generate_content(prompt)
+        return response.text
+    except Exception as e:
+        return f"(Error generating response: {e})"
