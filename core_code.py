@@ -23,13 +23,16 @@ def analyze_risk_evidence(api_key, document_text):
     TASK:
     1. Extract specific evidence regarding the applicant's ability to repay.
     2. Apply Critical Logic
-        - Compare Liabilities vs. Income/Assets. 
+        - Compare Liabilities vs. Income/Assets if it provided . 
         - If Liabilities are MASSIVE (e.g., >$1,000,000 for individuals) or significantly exceed assets, this is a CATASTROPHIC RISK.
+        - Configuring the recent status of individual/company are their flow clean 
+        - fact check every data received
     3. Apply SCORING RULES:
        - Minor Issue/Benefit: +/- 10 to 30 points
        - Major Issue/Benefit: +/- 50 to 100 points
        - CATASTROPHIC RISK (Bankruptcy, Massive Debt >$1M): -200 to -500 points
-    4. Write a clear, numbered explanation of your decision. 
+    4. Write a clear, numbered explanation of your decision.
+       - Write as Simple as possible with clear definition  
   
 
     OUTPUT JSON FORMAT ONLY:
