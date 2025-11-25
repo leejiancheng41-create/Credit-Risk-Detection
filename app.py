@@ -6,113 +6,189 @@ from core_code import analyze_risk_evidence, calculate_refined_score
 # --- PAGE SETUP ---
 st.set_page_config(page_title="FinAI Risk Workbench", layout="wide", page_icon="🏦")
 
-st.markdown("""
-<style>
-    .reportview-container {
-        background: #f0f2f6
-    }
-    .metric-card {
-        background-color: #ffffff;
-        padding: 15px;
-        border-radius: 10px;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-    }
-</style>
-""", unsafe_allow_html=True)
+# --- SESSION STATE INITIALIZATION ---
+# This controls which "Tab" is currently visible
+if 'page' not in st.session_state:
+    st.session_state.page = 'search'
+if 'selected_client' not in st.session_state:
+    st.session_state.selected_client = None
+if 'analysis_result' not in st.session_state:
+    st.session_state.analysis_result = None
 
 # --- SIDEBAR ---
 with st.sidebar:
-    st.image("https://cdn-icons-png.flaticon.com/512/4149/4149665.png", width=80)
-    st.title("FinAI Risk System")
-    api_key = st.text_input("Enter Gemini API Key", type="password")
+    st.title("FinAI System")
+    api_key = st.text_input("Gemini API Key", type="password")
     st.divider()
-    st.info("System Status: Online")
+    # Navigation Buttons (Optional, just to show where we are)
+    if st.session_state.page == 'search':
+        st.markdown("📍 **Step 1: Search**")
+        st.markdown("Step 2: Upload")
+        st.markdown("Step 3: Results")
+    elif st.session_state.page == 'details':
+        st.markdown("✅ Step 1: Search")
+        st.markdown("📍 **Step 2: Upload**")
+        st.markdown("Step 3: Results")
+    elif st.session_state.page == 'results':
+        st.markdown("✅ Step 1: Search")
+        st.markdown("✅ Step 2: Upload")
+        st.markdown("📍 **Step 3: Results**")
 
-# --- MAIN LAYOUT ---
-st.title("🏦 Customer Risk Refinement Dashboard")
+    if st.button("🔄 Reset / Start Over"):
+        st.session_state.page = 'search'
+        st.session_state.selected_client = None
+        st.session_state.analysis_result = None
+        st.rerun()
 
-# 1. LOAD DATA
-df = get_applicant_data()
+# ==========================================
+# TAB 1: SEARCH & SELECT
+# ==========================================
+if st.session_state.page == 'search':
+    st.title("🔍 Step 1: Applicant Search")
 
-# 2. DATA TABLE
-st.subheader("1. Applicant Queue")
-event = st.dataframe(
-    df,
-    on_select="rerun",
-    selection_mode="single-row",
-    use_container_width=True,
-    hide_index=True,
-    height=250
-)
+    df = get_applicant_data()
 
-# 3. INTERACTIVE ANALYSIS
-if len(event.selection.rows) > 0:
-    selected_index = event.selection.rows[0]
-    client_data = df.iloc[selected_index]
-    client_id = client_data["ID"]
+    # Search Bar
+    search_query = st.text_input("Search by Name or ID", placeholder="Type name...")
+
+    # Filter Data
+    if search_query:
+        filtered_df = df[df.apply(lambda row: row.astype(str).str.contains(search_query, case=False).any(), axis=1)]
+    else:
+        filtered_df = df
+
+    st.info("Select a row to proceed to analysis.")
+
+    # Dataframe with selection
+    event = st.dataframe(
+        filtered_df,
+        on_select="rerun",
+        selection_mode="single-row",
+        use_container_width=True,
+        hide_index=True,
+        height=400
+    )
+
+    # Logic to switch tab
+    if len(event.selection.rows) > 0:
+        selected_index = event.selection.rows[0]
+        # Save client to session state
+        st.session_state.selected_client = filtered_df.iloc[selected_index]
+        # Move to next page
+        st.session_state.page = 'details'
+        st.rerun()
+
+# ==========================================
+# TAB 2: DETAILS & UPLOAD
+# ==========================================
+elif st.session_state.page == 'details':
+    client = st.session_state.selected_client
+
+    col_header, col_btn = st.columns([4, 1])
+    with col_header:
+        st.title(f"📂 Step 2: Analysis for {client['Name']}")
+    with col_btn:
+        if st.button("⬅️ Back to Search"):
+            st.session_state.page = 'search'
+            st.rerun()
+
+    # Show Client Details
+    c1, c2, c3, c4 = st.columns(4)
+    c1.metric("Applicant ID", client['ID'])
+    c2.metric("Type", client['Type'])
+    c3.metric("Reported Revenue", client['Revenue'])
+    c4.metric("Current Base FICO", client['Base_FICO'])
 
     st.divider()
 
-    # Create two columns for the workspace
-    col_left, col_right = st.columns([1, 1])
+    # Document Section
+    st.subheader("📄 Document Portal")
 
-    # LEFT: Document Viewer
+    col_left, col_right = st.columns(2)
+
     with col_left:
-        st.subheader(f"📂 Evidence for {client_data['Name']}")
+        st.markdown("**Current Evidence on File:**")
+        existing_doc = get_document_for_client(client['ID'])
+        doc_text = st.text_area("File Content", existing_doc, height=250)
 
-        # Load the mock document from data_store.py
-        doc_content = get_document_for_client(client_id)
-
-        # Display as a "File Preview"
-        st.text_area("Document Content (Email/Letter/Log)", doc_content, height=300)
-
-        # Option to upload new file (Requirement 2)
-        uploaded_file = st.file_uploader("Or upload new evidence file:", type=['txt'])
-        if uploaded_file:
-            doc_content = uploaded_file.getvalue().decode("utf-8")
-            st.success("New file loaded.")
-
-    # RIGHT: AI Analysis & Score Refinement
     with col_right:
-        st.subheader("🧠 AI Risk Refinement")
+        st.markdown("**Upload New Evidence:**")
+        uploaded_file = st.file_uploader("Upload .txt, .csv, or email log", type=['txt'])
+        if uploaded_file:
+            doc_text = uploaded_file.getvalue().decode("utf-8")
+            st.success("✅ New file loaded successfully!")
 
-        if st.button("Analyze & Refine Score", type="primary"):
-            if not api_key:
-                st.error("Please enter API Key in sidebar.")
-            else:
-                with st.spinner("Gemini is analyzing income stability and financing status..."):
-                    # 1. Call the AI Engine
-                    ai_results = analyze_risk_evidence(api_key, doc_content)
+    # Analyze Button at Bottom
+    st.divider()
+    if st.button("✨ Analyze & Refine Score", type="primary", use_container_width=True):
+        if not api_key:
+            st.error("⚠️ Please enter your Gemini API Key in the sidebar first.")
+        else:
+            with st.spinner("🤖 AI is reading documents, cross-referencing assets, and calculating risk..."):
+                # Call AI
+                result = analyze_risk_evidence(api_key, doc_text)
 
-                    if "error" in ai_results:
-                        st.error("AI Error: " + str(ai_results))
-                    else:
-                        # 2. Calculate Math
-                        base_score = int(client_data["Base_FICO"])
-                        new_score, adjustment = calculate_refined_score(base_score, ai_results)
+                # Save Result
+                st.session_state.analysis_result = result
+                # Move to next page
+                st.session_state.page = 'results'
+                st.rerun()
 
-                        # 3. Display Results
+# ==========================================
+# TAB 3: RESULTS & EXPLANATION
+# ==========================================
+elif st.session_state.page == 'results':
+    st.title("📊 Step 3: Final Risk Assessment")
 
-                        # Score Cards
-                        c1, c2, c3 = st.columns(3)
-                        c1.metric("Base FICO", base_score)
-                        c2.metric("AI Adjustment", f"{adjustment:+d}", delta_color="normal")
-                        c3.metric("Refined Score", new_score, delta=adjustment)
+    client = st.session_state.selected_client
+    ai_data = st.session_state.analysis_result
 
-                        st.markdown("---")
+    if "error" in ai_data:
+        st.error(f"Analysis Failed: {ai_data['error']}")
+    else:
+        # Calculate Scores
+        base = int(client['Base_FICO'])
+        final_score, adjustment = calculate_refined_score(base, ai_data)
 
-                        # Evidence Table (Requirement 3)
-                        st.write("#### Extracted Evidence Table")
-                        evidence_df = pd.DataFrame(ai_results)
-                        st.dataframe(evidence_df, use_container_width=True)
+        # 1. Score Metrics
+        m1, m2, m3 = st.columns(3)
+        m1.metric("Base FICO", base)
+        m2.metric("AI Risk Adjustment", f"{adjustment:+d}", delta_color="inverse")
+        m3.metric("Final Refined Score", final_score, delta=adjustment)
 
-                        # Final Logic
-                        if new_score >= 670:
-                            st.success("✅ Recommendation: APPROVE")
-                        elif new_score >= 580:
-                            st.warning("⚠️ Recommendation: MANUAL REVIEW REQUIRED")
-                        else:
-                            st.error("❌ Recommendation: REJECT")
+        # 2. Evidence Table
+        st.subheader("🔎 Extracted Evidence")
+        evidence_list = ai_data.get("Findings", [])
+        if evidence_list:
+            st.dataframe(pd.DataFrame(evidence_list), use_container_width=True)
+        else:
+            st.warning("No specific evidence factors found in document.")
 
-else:
-    st.info("👈 Please select a customer from the table above to start the risk assessment.")
+        # 3. Recommendation
+        st.subheader("📝 Final Recommendation")
+
+        # Logic for recommendation status
+        if final_score >= 670:
+            status = "APPROVED"
+            color = "green"
+            icon = "✅"
+        elif final_score >= 580:
+            status = "MANUAL REVIEW REQUIRED"
+            color = "orange"
+            icon = "⚠️"
+        else:
+            status = "REJECTED"
+            color = "red"
+            icon = "❌"
+
+        st.markdown(f"""
+        <div style="background-color: rgba(200, 200, 200, 0.2); padding: 20px; border-radius: 10px; border-left: 10px solid {color};">
+            <h2 style="color: {color}; margin:0;">{icon} {status}</h2>
+        </div>
+        """, unsafe_allow_html=True)
+
+        # 4. Detailed Explanation
+        st.markdown("<br>", unsafe_allow_html=True)
+        st.subheader("💡 AI Rationale")
+        explanation = ai_data.get("Summary_Explanation", "No summary provided.")
+        st.info(explanation)
