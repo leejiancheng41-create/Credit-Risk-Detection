@@ -69,7 +69,7 @@ if st.session_state.page == 'search':
         filtered_df,
         on_select="rerun",
         selection_mode="single-row",
-        use_container_width=True,
+        width='stretch',
         hide_index=True,
         height=400
     )
@@ -116,7 +116,7 @@ elif st.session_state.page == 'details':
         st.subheader("📄 Document Portal")
         st.markdown("**Current Evidence on File:**")
         existing_doc = get_document_for_client(client['ID'])
-        doc_text = st.text_area("File Content", existing_doc, height=250)
+        doc_text = st.text_area("File Content", existing_doc, height=320)
 
         st.markdown("**Upload New Evidence:**")
         uploaded_file = st.file_uploader("Upload .txt, .csv, or email log", type=['txt'])
@@ -163,7 +163,7 @@ elif st.session_state.page == 'details':
 
     # Analyze Button at Bottom
     st.divider()
-    if st.button("✨ Analyze & Refine Score", type="primary", use_container_width=True):
+    if st.button("✨ Analyze & Refine Score", type="primary",width='stretch'):
         if not api_key:
             st.error("⚠️ Please enter your Gemini API Key in the sidebar first.")
         else:
@@ -211,7 +211,7 @@ elif st.session_state.page == 'results':
         st.subheader("🔎 Extracted Evidence")
         evidence_list = ai_data.get("Findings", [])
         if evidence_list:
-            st.dataframe(pd.DataFrame(evidence_list), use_container_width=True)
+            st.dataframe(pd.DataFrame(evidence_list), width='stretch')
         else:
             st.warning("No specific evidence factors found in document.")
 

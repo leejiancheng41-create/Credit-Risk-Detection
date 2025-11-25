@@ -39,10 +39,10 @@ def analyze_risk_evidence(api_key, document_text):
         {{
             "Findings" : [
                 {{
-                "Category": "Financing Status" or "Income Stability" or "Other Funds",
+                "Category": "Payment History" or "Income Stability" or "New Credit" or "Amounts Owed" or "Length of Credit History" or "Credit Mix", 
                 "Evidence": "Brief quote or summary of the finding...",
                 "Sentiment": "Positive" or "Negative" or "Critical",
-                "Score_Modifier": (Integer)
+                "Score_Modifier": (Integer) (based on scoring rules)
                 }}
             ],
             "Summary_Explanation": "1. The applicant has undeclared debts.\\n2. Income stability is strong, but liabilities are too high..."
