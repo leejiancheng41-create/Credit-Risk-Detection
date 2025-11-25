@@ -24,7 +24,7 @@ st.markdown("""
 with st.sidebar:
     st.image("https://cdn-icons-png.flaticon.com/512/4149/4149665.png", width=80)
     st.title("FinAI Risk System")
-    api_key = "AIzaSyDxAw6WexPBalpVaK7sMcXgZZGaVoi1yXA"
+    api_key = st.text_input("Enter Gemini API Key", type="password")
     st.divider()
     st.info("System Status: Online")
 
