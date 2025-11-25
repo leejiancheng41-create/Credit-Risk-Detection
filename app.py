@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
 from  data import get_applicant_data, get_document_for_client
-from core_code import analyze_risk_evidence, calculate_refined_score
+from core_code import analyze_risk_evidence, calculate_refined_score, get_customer_response
 
 # --- PAGE SETUP ---
 st.set_page_config(page_title="FinAI Risk Workbench", layout="wide", page_icon="🏦")
@@ -15,11 +15,16 @@ if 'selected_client' not in st.session_state:
 if 'analysis_result' not in st.session_state:
     st.session_state.analysis_result = None
 
+# Initialize Chat History
+if 'messages' not in st.session_state:
+    st.session_state.messages = []
+
 # --- SIDEBAR ---
 with st.sidebar:
     st.title("FinAI System")
     api_key = st.text_input("Gemini API Key", type="password")
     st.divider()
+
     # Navigation Buttons (Optional, just to show where we are)
     if st.session_state.page == 'search':
         st.markdown("📍 **Step 1: Search**")
@@ -75,6 +80,8 @@ if st.session_state.page == 'search':
         # Save client to session state
         st.session_state.selected_client = filtered_df.iloc[selected_index]
         # Move to next page
+        # --- FIX: CLEAR CHAT HISTORY ON NEW SELECTION ---
+        st.session_state.messages = []
         st.session_state.page = 'details'
         st.rerun()
 
@@ -93,30 +100,66 @@ elif st.session_state.page == 'details':
             st.rerun()
 
     # Show Client Details
-    c1, c2, c3, c4 = st.columns(4)
+    c1, c2, c3, c4, c5 = st.columns([1, 1.2, 2, 1, 2])
     c1.metric("Applicant ID", client['ID'])
     c2.metric("Type", client['Type'])
     c3.metric("Reported Revenue", client['Revenue'])
     c4.metric("Current Base FICO", client['Base_FICO'])
+    c5.metric("Application Status", client['Status'])
 
     st.divider()
 
-    # Document Section
-    st.subheader("📄 Document Portal")
-
-    col_left, col_right = st.columns(2)
+    # --- LAYOUT: LEFT (Docs) | RIGHT (Chat) ---
+    col_left, col_right = st.columns([1, 1])
 
     with col_left:
+        st.subheader("📄 Document Portal")
         st.markdown("**Current Evidence on File:**")
         existing_doc = get_document_for_client(client['ID'])
         doc_text = st.text_area("File Content", existing_doc, height=250)
 
-    with col_right:
         st.markdown("**Upload New Evidence:**")
         uploaded_file = st.file_uploader("Upload .txt, .csv, or email log", type=['txt'])
         if uploaded_file:
             doc_text = uploaded_file.getvalue().decode("utf-8")
             st.success("✅ New file loaded successfully!")
+
+    with col_right:
+        st.subheader("💬 Interview Applicant")
+
+        # Floating Chat Interface using Popover (or simple container)
+        # --- FIX: SCROLLABLE CONTAINER FOR CHAT ---
+
+        with st.container(height=480, border=True):
+            if not st.session_state.messages:
+                # Initial greeting from AI
+                st.session_state.messages.append({"role": "assistant",
+                                                  "content": f"Hello, I am {client['Name']}. How can I help with my application?"})
+
+            # Display Chat History
+            for msg in st.session_state.messages:
+                with st.chat_message(msg["role"]):
+                    st.write(msg["content"])
+
+            # Chat Input
+            if user_input := st.chat_input("Ask the applicant about their income, debts, etc..."):
+                # 1. Show User Message
+                st.session_state.messages.append({"role": "user", "content": user_input})
+                with st.chat_message("user"):
+                    st.write(user_input)
+
+                # 2. Get AI Response
+                if not api_key:
+                    st.error("Please enter API Key.")
+                else:
+                    with st.spinner(f"{client['Name']} is typing..."):
+                        ai_reply = get_customer_response(api_key, client['Name'], client.to_dict(),st.session_state.messages)
+
+                        st.session_state.messages.append({"role": "assistant", "content": ai_reply})
+                        with st.chat_message("assistant"):
+                            st.write(ai_reply)
+
+        st.caption("ℹ️ This chat log will be automatically included in the risk analysis below.")
 
     # Analyze Button at Bottom
     st.divider()
@@ -125,12 +168,20 @@ elif st.session_state.page == 'details':
             st.error("⚠️ Please enter your Gemini API Key in the sidebar first.")
         else:
             with st.spinner("🤖 AI is reading documents, cross-referencing assets, and calculating risk..."):
-                # Call AI
-                result = analyze_risk_evidence(api_key, doc_text)
 
-                # Save Result
+                # --- CRITICAL STEP: MERGE CHAT INTO DOCUMENT ---
+                # We turn the chat history into text format
+                chat_transcript = "\n\n=== CHAT INTERVIEW TRANSCRIPT ===\n"
+                for msg in st.session_state.messages:
+                    role = "Loan Officer" if msg["role"] == "user" else "Applicant"
+                    chat_transcript += f"{role}: {msg['content']}\n"
+
+                # Combine Document + Chat
+                final_evidence_text = doc_text + chat_transcript
+
+                # Send everything to Risk Engine
+                result = analyze_risk_evidence(api_key, final_evidence_text)
                 st.session_state.analysis_result = result
-                # Move to next page
                 st.session_state.page = 'results'
                 st.rerun()
 
@@ -192,3 +243,7 @@ elif st.session_state.page == 'results':
         st.subheader("💡 AI Rationale")
         explanation = ai_data.get("Summary_Explanation", "No summary provided.")
         st.info(explanation)
+
+        if st.button("⬅️ Back to Details"):
+            st.session_state.page = 'details'
+            st.rerun()
