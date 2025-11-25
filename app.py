@@ -100,7 +100,7 @@ elif st.session_state.page == 'details':
             st.rerun()
 
     # Show Client Details
-    c1, c2, c3, c4, c5 = st.columns([1, 1.2, 2, 1, 2])
+    c1, c2, c3, c4, c5 = st.columns([1, 1.2, 1.2, 1, 2])
     c1.metric("Applicant ID", client['ID'])
     c2.metric("Type", client['Type'])
     c3.metric("Reported Revenue", client['Revenue'])
