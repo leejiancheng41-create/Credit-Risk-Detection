@@ -24,6 +24,7 @@ with st.sidebar:
     st.title("FinAI System")
     api_key = st.text_input("Gemini API Key", type="password")
     st.divider()
+
     # Navigation Buttons (Optional, just to show where we are)
     if st.session_state.page == 'search':
         st.markdown("📍 **Step 1: Search**")
@@ -79,6 +80,8 @@ if st.session_state.page == 'search':
         # Save client to session state
         st.session_state.selected_client = filtered_df.iloc[selected_index]
         # Move to next page
+        # --- FIX: CLEAR CHAT HISTORY ON NEW SELECTION ---
+        st.session_state.messages = []
         st.session_state.page = 'details'
         st.rerun()
 
@@ -97,11 +100,12 @@ elif st.session_state.page == 'details':
             st.rerun()
 
     # Show Client Details
-    c1, c2, c3, c4 = st.columns(4)
+    c1, c2, c3, c4, c5 = st.columns([1, 1.2, 2, 1, 2])
     c1.metric("Applicant ID", client['ID'])
     c2.metric("Type", client['Type'])
     c3.metric("Reported Revenue", client['Revenue'])
     c4.metric("Current Base FICO", client['Base_FICO'])
+    c5.metric("Application Status", client['Status'])
 
     st.divider()
 
@@ -124,9 +128,9 @@ elif st.session_state.page == 'details':
         st.subheader("💬 Interview Applicant")
 
         # Floating Chat Interface using Popover (or simple container)
-        # We put it in a container to make it look distinct
-        chat_container = st.container(border=True)
-        with chat_container:
+        # --- FIX: SCROLLABLE CONTAINER FOR CHAT ---
+
+        with st.container(height=480, border=True):
             if not st.session_state.messages:
                 # Initial greeting from AI
                 st.session_state.messages.append({"role": "assistant",
@@ -149,8 +153,7 @@ elif st.session_state.page == 'details':
                     st.error("Please enter API Key.")
                 else:
                     with st.spinner(f"{client['Name']} is typing..."):
-                        ai_reply = get_customer_response(api_key, client['Name'], client.to_dict(),
-                                                         st.session_state.messages)
+                        ai_reply = get_customer_response(api_key, client['Name'], client.to_dict(),st.session_state.messages)
 
                         st.session_state.messages.append({"role": "assistant", "content": ai_reply})
                         with st.chat_message("assistant"):
