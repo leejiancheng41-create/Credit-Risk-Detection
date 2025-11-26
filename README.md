@@ -5,6 +5,9 @@
 
 **https://credit-risk-detection-um-hackathon.streamlit.app**
 
+## Demo
+
+[![Watch the video](youtube.png)](https://youtu.be/HlJDjgHBcnA)
 
 ## The Problem
 
