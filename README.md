@@ -1,6 +1,6 @@
 # The AI-Powered Credit Risk Determination
 
-![FinAI Screenshot](Image And Demo Video/FirstPage.png) 
+![FinAI Screenshot](Image_And_Demo_Video/FirstPage.png)
 ## WebSite
 
 **https://credit-risk-detection-um-hackathon.streamlit.app**
