@@ -10,7 +10,7 @@ def get_applicant_data():
     Reads loans.csv, calculates real values, and merges with text data.
     """
     try:
-        # Read the CSV
+        # Read the CSV dataframe
         df = pd.read_csv("loans.csv")
 
         # 1. Calculate Real Annual Income (Reverse the log)
