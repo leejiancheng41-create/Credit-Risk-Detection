@@ -1,12 +1,12 @@
 import google.generativeai as genai
 import json
 import streamlit as st
-
+import time # Import time for backoff
 
 # --- CORE FUNCTION 1: AI ANALYSIS ---
-def analyze_risk_evidence(api_key, document_text):
+def analyze_risk_evidence(api_key, document_text, max_retries=3):
     """
-    Sends the document to Gemini to extract structured risk factors.
+    Sends the document to Gemini to extract structured risk factors, with a retry mechanism.
     """
     if not api_key:
         return {"error": "Missing API Key"}
@@ -32,7 +32,9 @@ def analyze_risk_evidence(api_key, document_text):
        - Major Issue/Benefit: +/- 50 to 100 points
        - CATASTROPHIC RISK (Bankruptcy, Massive Debt >$1M): -200 to -500 points
     4. Write a clear, numbered explanation of your decision.
-       - Write as Simple as possible with clear definition  
+       - Write as Simple as possible with clear definition
+    5. Strict JSON Output:Your entire response MUST be a single, valid JSON object. Do not include any text, explanations, or markdown formatting before or after the JSON block.
+
   
 
     OUTPUT JSON FORMAT ONLY:
@@ -50,12 +52,30 @@ def analyze_risk_evidence(api_key, document_text):
         }}
     """
 
-    try:
-        response = model.generate_content(prompt)
-        clean_json = response.text.replace("```json", "").replace("```", "").strip()
-        return json.loads(clean_json)
-    except Exception as e:
-        return {"error": str(e)}
+    for attempt in range(max_retries):
+        try:
+            # Using json mode for Gemini
+            response = model.generate_content(prompt, generation_config={"response_mime_type": "application/json"})
+            # The response should be a valid JSON string already
+            clean_json = response.text.strip()
+            # Attempt to parse the JSON
+            parsed_json = json.loads(clean_json)
+            # If successful, return the result
+            return parsed_json
+        except json.JSONDecodeError as e:
+            st.warning(f"Attempt {attempt + 1} failed: Invalid JSON format. Retrying...")
+            time.sleep(1) # Wait a second before retrying
+            if attempt + 1 == max_retries:
+                st.error(f"Analysis failed after {max_retries} attempts. Final error: {e}")
+                return {"error": f"Failed to decode JSON after {max_retries} attempts. Last error: {e}"}
+        except Exception as e:
+            # Handle other potential API errors (e.g., network issues)
+            st.error(f"An unexpected error occurred during analysis on attempt {attempt + 1}: {e}")
+            time.sleep(1)
+            if attempt + 1 == max_retries:
+                return {"error": str(e)}
+
+    return {"error": "Analysis failed after all retries."}
 
 
 # --- CORE FUNCTION 2: SCORE REFINEMENT ---
