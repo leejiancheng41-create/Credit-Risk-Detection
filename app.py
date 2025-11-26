@@ -1,6 +1,6 @@
 import streamlit as st
 import pandas as pd
-from  data import get_applicant_data, get_document_for_client
+from data import get_applicant_data, get_document_for_client
 from core_code import analyze_risk_evidence, calculate_refined_score, get_customer_response
 
 # --- PAGE SETUP ---
@@ -23,6 +23,8 @@ if 'messages' not in st.session_state:
 with st.sidebar:
     st.title("FinAI System")
     api_key = st.text_input("Gemini API Key", type="password")
+    #show where the data loaded
+    st.caption("Powered by loans.csv dataset")
     st.divider()
 
     # Navigation Buttons (Optional, just to show where we are)
@@ -58,9 +60,12 @@ if st.session_state.page == 'search':
 
     # Filter Data
     if search_query:
-        filtered_df = df[df.apply(lambda row: row.astype(str).str.contains(search_query, case=False).any(), axis=1)]
+        # FIX: Added regex=False to prevent crashes on special characters
+        filtered_df = df[
+            df.apply(lambda row: row.astype(str).str.contains(search_query, case=False, regex=False).any(), axis=1)]
     else:
         filtered_df = df
+
 
     st.info("Select a row to proceed to analysis.")
 
@@ -100,10 +105,10 @@ elif st.session_state.page == 'details':
             st.rerun()
 
     # Show Client Details
-    c1, c2, c3, c4, c5 = st.columns([1, 1.2, 1.2, 1, 2])
+    c1, c2, c3, c4, c5 = st.columns([1, 1.5, 1.5, 1, 2])
     c1.metric("Applicant ID", client['ID'])
     c2.metric("Type", client['Type'])
-    c3.metric("Reported Revenue", client['Revenue'])
+    c3.metric("Annual Income", f"${client['Annual Income']:,}")
     c4.metric("Current Base FICO", client['Base_FICO'])
     c5.metric("Application Status", client['Status'])
 
@@ -121,7 +126,7 @@ elif st.session_state.page == 'details':
         st.markdown("**Upload New Evidence:**")
         uploaded_file = st.file_uploader("Upload .txt, .csv, or email log", type=['txt'])
         if uploaded_file:
-            doc_text = uploaded_file.getvalue().decode("utf-8")
+            doc_text += "\n\n=== UPLOADED FILE ===\n" + uploaded_file.getvalue().decode("utf-8")
             st.success("✅ New file loaded successfully!")
 
     with col_right:
