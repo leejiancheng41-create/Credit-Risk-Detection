@@ -1,13 +1,18 @@
 # The AI-Powered Credit Risk Determination
 
-![FinAI Screenshot](./FirstPage.png) 
+![FinAI Screenshot](Image And Demo Video/FirstPage.png) 
 ## WebSite
 
 **https://credit-risk-detection-um-hackathon.streamlit.app**
 
 ## Demo
 
-[![Watch the video](youtube.png)](https://youtu.be/HlJDjgHBcnA)
+[![Watch the video](Image And Demo Video/youtube.png)](https://youtu.be/HlJDjgHBcnA)
+
+## Data Set
+    
+Data set are downloaded from https://www.kaggle.com/datasets/northpatawee/ficoloans/data?select=loans.csv
+
 
 ## The Problem
 

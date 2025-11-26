@@ -11,7 +11,7 @@ def get_applicant_data():
     """
     try:
         # Read the CSV dataframe
-        df = pd.read_csv("loans.csv")
+        df = pd.read_csv("Data Set/loans.csv")
 
         # 1. Calculate Real Annual Income (Reverse the log)
         # The CSV has 'log.annual.inc', so we do exp(x) to get real $
